@@ -10,7 +10,9 @@ Back up your device first. `pmbootstrap install` erases userdata.
 
 ## 1. Find out which panel you have
 
-lk2nd reports the panel the Samsung bootloader detected:
+If you are still on Android/LineageOS, the easiest check is one Termux command
+— see [`DIAGNOSTICS.md`](DIAGNOSTICS.md). Otherwise, lk2nd reports the panel the
+Samsung bootloader detected:
 
 ```console
 $ fastboot getvar lk2nd:panel

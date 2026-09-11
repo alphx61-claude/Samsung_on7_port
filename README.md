@@ -115,5 +115,10 @@ check first if the screen is still dark.
 
 See [`docs/INSTALL.md`](docs/INSTALL.md).
 
+Before flashing, run the panel check in
+[`docs/DIAGNOSTICS.md`](docs/DIAGNOSTICS.md) from your current Android install.
+The stock/LineageOS kernel reports which of the two panels your unit actually
+has; the mainline kernel cannot work it out on its own.
+
 [lmdpdg]: https://github.com/msm8916-mainline/linux-mdss-dsi-panel-driver-generator
 [downstream]: https://github.com/Galaxy-MSM8916/android_kernel_samsung_msm8916

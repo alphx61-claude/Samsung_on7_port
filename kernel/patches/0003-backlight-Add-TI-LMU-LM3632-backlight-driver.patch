@@ -1,0 +1,247 @@
+From 2cc7187987d2ad49e74cb0870278bbe0dd6e97cc Mon Sep 17 00:00:00 2001
+From: alphx61-claude <taranrajput11@gmail.com>
+Date: Fri, 11 Sep 2026 22:19:35 +0000
+Subject: [PATCH 3/4] backlight: Add TI LMU (LM3632) backlight driver
+
+drivers/mfd/ti-lmu.c registers a "ti-lmu-backlight" cell for the
+LM3632, but no driver for that cell was ever merged, so on boards using
+this chip the backlight stays off even when the panel initialises
+correctly.
+
+Add a driver for it. Brightness is 11 bit, split over the two brightness
+registers. The chip is put into I2C brightness mode because the PWM
+input is not wired up on all boards, and leaving it in PWM mode there
+would keep the backlight dark.
+
+The LDOs generating the +-5.5V panel bias are already handled by
+lm363x-regulator, so this only covers the backlight itself.
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WBT8fxGbtA4EKiL94VBvk2
+---
+ drivers/video/backlight/Kconfig            |   8 +
+ drivers/video/backlight/Makefile           |   1 +
+ drivers/video/backlight/ti-lmu-backlight.c | 184 +++++++++++++++++++++
+ 3 files changed, 193 insertions(+)
+ create mode 100644 drivers/video/backlight/ti-lmu-backlight.c
+
+diff --git a/drivers/video/backlight/Kconfig b/drivers/video/backlight/Kconfig
+index 51387b1ef..1166f1aa5 100644
+--- a/drivers/video/backlight/Kconfig
++++ b/drivers/video/backlight/Kconfig
+@@ -389,6 +389,14 @@ config BACKLIGHT_LM3639
+ 	help
+ 	  This supports TI LM3639 Backlight + 1.5A Flash LED Driver
+ 
++config BACKLIGHT_TI_LMU
++	tristate "Backlight driver for TI LMU (LM3632)"
++	depends on MFD_TI_LMU
++	help
++	  Say Y to enable the backlight driver for the TI LMU LM3632.
++	  The MFD core registers a backlight cell for this chip but no
++	  driver existed for it, so the backlight stayed off.
++
+ config BACKLIGHT_LP855X
+ 	tristate "Backlight driver for TI LP855X"
+ 	depends on I2C && PWM
+diff --git a/drivers/video/backlight/Makefile b/drivers/video/backlight/Makefile
+index f72e1c3c5..c847413df 100644
+--- a/drivers/video/backlight/Makefile
++++ b/drivers/video/backlight/Makefile
+@@ -41,6 +41,7 @@ obj-$(CONFIG_BACKLIGHT_LM3630A)		+= lm3630a_bl.o
+ obj-$(CONFIG_BACKLIGHT_LM3639)		+= lm3639_bl.o
+ obj-$(CONFIG_BACKLIGHT_LOCOMO)		+= locomolcd.o
+ obj-$(CONFIG_BACKLIGHT_LP855X)		+= lp855x_bl.o
++obj-$(CONFIG_BACKLIGHT_TI_LMU)		+= ti-lmu-backlight.o
+ obj-$(CONFIG_BACKLIGHT_LP8788)		+= lp8788_bl.o
+ obj-$(CONFIG_BACKLIGHT_LV5207LP)	+= lv5207lp.o
+ obj-$(CONFIG_BACKLIGHT_MAX8925)		+= max8925_bl.o
+diff --git a/drivers/video/backlight/ti-lmu-backlight.c b/drivers/video/backlight/ti-lmu-backlight.c
+new file mode 100644
+index 000000000..06e6cafc8
+--- /dev/null
++++ b/drivers/video/backlight/ti-lmu-backlight.c
+@@ -0,0 +1,184 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Backlight driver for the TI LMU LM3632.
++ *
++ * The MFD core (drivers/mfd/ti-lmu.c) already registers a "ti-lmu-backlight"
++ * cell for LM3632, but no driver was ever merged for it, so the backlight of
++ * boards using this chip stays off. The LDOs that generate the +-5.5V panel
++ * bias are handled separately by lm363x-regulator.
++ */
++
++#include <linux/backlight.h>
++#include <linux/bitops.h>
++#include <linux/mfd/ti-lmu.h>
++#include <linux/mfd/ti-lmu-register.h>
++#include <linux/mod_devicetable.h>
++#include <linux/module.h>
++#include <linux/platform_device.h>
++#include <linux/property.h>
++#include <linux/regmap.h>
++
++/* Brightness is 11 bit, split over two registers */
++#define LM3632_BRT_LSB_MASK		GENMASK(2, 0)
++#define LM3632_BRT_MSB_SHIFT		3
++#define LM3632_MAX_BRIGHTNESS		2047
++
++/*
++ * Bit 3 and bit 4 of the enable register gate the two backlight current
++ * sinks, so "led-sources = <0 1>" enables both of them.
++ */
++#define LM3632_BL_SINK(n)		BIT(3 + (n))
++#define LM3632_BL_MAX_SINKS		2
++
++struct ti_lmu_bl {
++	struct regmap *regmap;
++	u8 sinks;
++};
++
++static int ti_lmu_bl_update_status(struct backlight_device *bl)
++{
++	struct ti_lmu_bl *lmu_bl = bl_get_data(bl);
++	int brightness = backlight_get_brightness(bl);
++	int ret;
++
++	if (!brightness)
++		return regmap_update_bits(lmu_bl->regmap, LM3632_REG_ENABLE,
++					  LM3632_BL_EN_MASK, 0);
++
++	ret = regmap_update_bits(lmu_bl->regmap, LM3632_REG_BRT_LSB,
++				 LM3632_BRT_LSB_MASK,
++				 brightness & LM3632_BRT_LSB_MASK);
++	if (ret)
++		return ret;
++
++	ret = regmap_write(lmu_bl->regmap, LM3632_REG_BRT_MSB,
++			   (brightness >> LM3632_BRT_MSB_SHIFT) & 0xff);
++	if (ret)
++		return ret;
++
++	return regmap_update_bits(lmu_bl->regmap, LM3632_REG_ENABLE,
++				  LM3632_BL_EN_MASK, LM3632_BL_EN_MASK);
++}
++
++static const struct backlight_ops ti_lmu_bl_ops = {
++	.options = BL_CORE_SUSPENDRESUME,
++	.update_status = ti_lmu_bl_update_status,
++};
++
++static int ti_lmu_bl_parse_sinks(struct device *dev, struct ti_lmu_bl *lmu_bl)
++{
++	struct fwnode_handle *child;
++	u32 sources[LM3632_BL_MAX_SINKS];
++	int i, num;
++
++	/*
++	 * The binding puts the current sinks in a child node of the backlight
++	 * node. Default to driving both sinks when it is missing.
++	 */
++	child = device_get_next_child_node(dev, NULL);
++	if (!child) {
++		lmu_bl->sinks = LM3632_BL_SINK(0) | LM3632_BL_SINK(1);
++		return 0;
++	}
++
++	num = fwnode_property_count_u32(child, "led-sources");
++	if (num < 0) {
++		lmu_bl->sinks = LM3632_BL_SINK(0) | LM3632_BL_SINK(1);
++		goto out;
++	}
++
++	if (num > LM3632_BL_MAX_SINKS) {
++		fwnode_handle_put(child);
++		return dev_err_probe(dev, -EINVAL,
++				     "Too many led-sources: %d\n", num);
++	}
++
++	fwnode_property_read_u32_array(child, "led-sources", sources, num);
++	for (i = 0; i < num; i++) {
++		if (sources[i] >= LM3632_BL_MAX_SINKS) {
++			fwnode_handle_put(child);
++			return dev_err_probe(dev, -EINVAL,
++					     "Invalid led-source: %u\n",
++					     sources[i]);
++		}
++		lmu_bl->sinks |= LM3632_BL_SINK(sources[i]);
++	}
++
++out:
++	fwnode_handle_put(child);
++	return 0;
++}
++
++static int ti_lmu_bl_probe(struct platform_device *pdev)
++{
++	struct ti_lmu *lmu = dev_get_drvdata(pdev->dev.parent);
++	struct device *dev = &pdev->dev;
++	struct backlight_properties props = {
++		.type = BACKLIGHT_RAW,
++		.max_brightness = LM3632_MAX_BRIGHTNESS,
++		.brightness = LM3632_MAX_BRIGHTNESS,
++	};
++	struct backlight_device *bl;
++	struct ti_lmu_bl *lmu_bl;
++	int ret;
++
++	lmu_bl = devm_kzalloc(dev, sizeof(*lmu_bl), GFP_KERNEL);
++	if (!lmu_bl)
++		return -ENOMEM;
++
++	lmu_bl->regmap = lmu->regmap;
++
++	ret = ti_lmu_bl_parse_sinks(dev, lmu_bl);
++	if (ret)
++		return ret;
++
++	/* Over-voltage protection for the +-5.5V bias rails */
++	ret = regmap_update_bits(lmu_bl->regmap, LM3632_REG_CONFIG1,
++				 LM3632_OVP_MASK, LM3632_OVP_25V);
++	if (ret)
++		return dev_err_probe(dev, ret, "Failed to set OVP\n");
++
++	/*
++	 * Take brightness from the I2C registers rather than the PWM input.
++	 * The PWM pin is not wired up on all boards, and leaving the chip in
++	 * PWM mode there would keep the backlight dark.
++	 */
++	ret = regmap_update_bits(lmu_bl->regmap, LM3632_REG_IO_CTRL,
++				 LM3632_PWM_MASK, LM3632_I2C_MODE);
++	if (ret)
++		return dev_err_probe(dev, ret, "Failed to select I2C mode\n");
++
++	ret = regmap_update_bits(lmu_bl->regmap, LM3632_REG_ENABLE,
++				 LM3632_BL_CHANNEL_MASK, lmu_bl->sinks);
++	if (ret)
++		return dev_err_probe(dev, ret, "Failed to enable sinks\n");
++
++	device_property_read_u32(dev, "default-brightness", &props.brightness);
++
++	bl = devm_backlight_device_register(dev, "lm3632-backlight", dev,
++					    lmu_bl, &ti_lmu_bl_ops, &props);
++	if (IS_ERR(bl))
++		return dev_err_probe(dev, PTR_ERR(bl),
++				     "Failed to register backlight\n");
++
++	return backlight_update_status(bl);
++}
++
++static const struct of_device_id ti_lmu_bl_of_match[] = {
++	{ .compatible = "ti,lm3632-backlight" },
++	{ /* sentinel */ }
++};
++MODULE_DEVICE_TABLE(of, ti_lmu_bl_of_match);
++
++static struct platform_driver ti_lmu_bl_driver = {
++	.probe = ti_lmu_bl_probe,
++	.driver = {
++		.name = "ti-lmu-backlight",
++		.of_match_table = ti_lmu_bl_of_match,
++	},
++};
++module_platform_driver(ti_lmu_bl_driver);
++
++MODULE_DESCRIPTION("TI LMU LM3632 backlight driver");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:ti-lmu-backlight");

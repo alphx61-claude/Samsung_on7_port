@@ -1,0 +1,11 @@
+# Display: MDSS/DSI, both panel variants, and the LM3632 that supplies the
+# panel bias rails and the backlight.
+msm
+panel-samsung-s6d7aa0x62-bv050hdm
+panel-samsung-ili9881c-ski550002
+ti-lmu
+lm363x-regulator
+ti-lmu-backlight
+
+# Touchscreen
+zinitix

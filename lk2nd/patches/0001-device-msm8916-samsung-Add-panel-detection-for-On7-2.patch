@@ -1,0 +1,61 @@
+From 5bea721e00170fb6685fc1e154c1da75a3369363 Mon Sep 17 00:00:00 2001
+From: alphx61-claude <taranrajput11@gmail.com>
+Date: Fri, 11 Sep 2026 22:19:45 +0000
+Subject: [PATCH] device: msm8916-samsung: Add panel detection for On7 (2015)
+
+The On7 ships one of two panels, so the mainline device tree cannot
+hardcode a compatible. Map the vendor panel names reported by the
+Samsung bootloader onto the mainline panel compatibles so lk2nd patches
+the right one into the kernel device tree.
+
+Both the Indian (SM-G600FY) and Chinese (SM-G6000) variants use the same
+two panels.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01WBT8fxGbtA4EKiL94VBvk2
+---
+ lk2nd/device/dts/msm8916/msm8916-samsung.dts | 24 ++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/lk2nd/device/dts/msm8916/msm8916-samsung.dts b/lk2nd/device/dts/msm8916/msm8916-samsung.dts
+index d4ad12b..f6efb27 100644
+--- a/lk2nd/device/dts/msm8916/msm8916-samsung.dts
++++ b/lk2nd/device/dts/msm8916/msm8916-samsung.dts
+@@ -532,6 +532,18 @@
+ 			i2c-sda-gpios = <&tlmm 105 I2C_GPIO_FLAGS>;
+ 			i2c-scl-gpios = <&tlmm 106 I2C_GPIO_FLAGS>;
+ 		};
++
++		panel {
++			compatible = "samsung,on7-panel", "lk2nd,panel";
++
++			ss_dsi_panel_S6D7AA0X62_BV050HDM_HD {
++				compatible = "samsung,s6d7aa0x62-bv050hdm";
++			};
++
++			ss_dsi_panel_ILI9881C_SKI550002_HD {
++				compatible = "samsung,ili9881c-ski550002";
++			};
++		};
+ 	};
+ 
+ 	on7lte-swa {
+@@ -550,6 +562,18 @@
+ 			i2c-sda-gpios = <&tlmm 105 I2C_GPIO_FLAGS>;
+ 			i2c-scl-gpios = <&tlmm 106 I2C_GPIO_FLAGS>;
+ 		};
++
++		panel {
++			compatible = "samsung,on7-panel", "lk2nd,panel";
++
++			ss_dsi_panel_S6D7AA0X62_BV050HDM_HD {
++				compatible = "samsung,s6d7aa0x62-bv050hdm";
++			};
++
++			ss_dsi_panel_ILI9881C_SKI550002_HD {
++				compatible = "samsung,ili9881c-ski550002";
++			};
++		};
+ 	};
+ 
+ 	/*

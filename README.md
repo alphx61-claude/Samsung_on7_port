@@ -91,10 +91,18 @@ with the display modules added to `modules-initfs`.
 
 ## Build status
 
-The four kernel patches were built for arm64 against `v6.6-msm8916` with the
-stock postmarketOS msm8916 config. All three new drivers compile warning-free
-and `msm8916-samsung-on7.dtb` builds clean. The patched lk2nd device tree
-compiles too.
+A full arm64 `Image.gz + modules + dtbs` build of `v6.6-msm8916` with these
+patches and the stock postmarketOS msm8916 config succeeds. The three new
+drivers compile warning-free, `msm8916-samsung-on7.dtb` builds clean, and the
+module aliases match the compatibles in the device tree:
+
+```
+panel-samsung-s6d7aa0x62-bv050hdm.ko   of:N*T*Csamsung,s6d7aa0x62-bv050hdm
+panel-samsung-ili9881c-ski550002.ko    of:N*T*Csamsung,ili9881c-ski550002
+ti-lmu-backlight.ko                    of:N*T*Cti,lm3632-backlight
+```
+
+The patched lk2nd device tree compiles too.
 
 **None of this has been tested on real hardware** — there is no On7 attached to
 the machine this was built on. The register sequences, GPIOs, supplies and

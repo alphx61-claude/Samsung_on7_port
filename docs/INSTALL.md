@@ -205,6 +205,65 @@ Brightness:
 $ echo 1200 > /sys/class/backlight/lm3632-backlight/brightness
 ```
 
+## If it boots but you cannot ssh in
+
+The phone answers `ping 172.16.42.1` from very early in the initramfs, long
+before it has finished booting, so **ping succeeding proves almost nothing**.
+`init_2nd.sh` sets that address up in its first few lines:
+
+```
+setup_usb_network ; start_unudhcpd     <- 172.16.42.1 is live from here
+setup_framebuffer ; splash_start
+if debug_shell = y -> debug_shell      <- off unless you ask for it
+mount_subpartitions
+wait_root_partition                    <- 30s, then falls into a debug shell
+mount_root_partition ... switch_root
+```
+
+Two traps follow from that:
+
+- **Check the host interface actually exists.** With the phone unplugged,
+  `172.16.42.1` routes out of your default gateway and some unrelated machine
+  on your LAN may answer. That looks exactly like success. Confirm with
+  `ip route get 172.16.42.1` — it must leave via a `usb0`/`enx…` device, not
+  your ethernet.
+- **The host side gets no address on its own.** `unudhcpd` on the phone offers
+  you `172.16.42.2`, but nothing requests it unless your network manager picks
+  the interface up. Set it by hand:
+
+```
+IF=$(ls /sys/class/net | grep -E '^(usb|enx)' | head -1)
+sudo ip link set "$IF" up
+sudo ip addr add 172.16.42.2/24 dev "$IF"
+```
+
+With a real link up, probe both ports:
+
+```
+nc -vz 172.16.42.1 22    # sshd, so the real system booted
+nc -vz 172.16.42.1 23    # telnetd, so it fell into the initramfs debug shell
+```
+
+If neither answers about a minute after power-on, nothing is listening — the
+initramfs handed over but userspace did not get far. Ask for the debug shell
+explicitly:
+
+```
+./scripts/enable-debug-shell.sh
+pmbootstrap install
+pmbootstrap flasher flash_kernel      # boot image only, rootfs untouched
+```
+
+That adds `pmos.debug-shell` to the kernel command line, which stops the
+initramfs right after the splash — before it looks for any partition — and
+gives you three ways in at once: telnet on port 23, a USB ACM gadget
+(`/dev/ttyACM0` on the host, so a serial console with **no 3.5mm UART cable**),
+and kernel console output left enabled instead of silenced.
+
+At that shell, `cat /README` explains the environment and `pmos_continue_boot`
+resumes the boot so you can watch where it fails. Turn it back off afterwards
+with `./scripts/enable-debug-shell.sh --disable`.
+
 ## If the panel stays dark
 
 Work through these in order.

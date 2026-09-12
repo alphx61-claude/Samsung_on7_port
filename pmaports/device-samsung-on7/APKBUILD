@@ -31,7 +31,7 @@ package() {
 
 nonfree_firmware() {
 	pkgdesc="GPU/WiFi/BT/Modem/Video firmware"
-	depends="firmware-qcom-adreno-a300 msm-firmware-loader firmware-samsung-on7-wcnss-nv"
+	depends="firmware-qcom-adreno-a300 msm-firmware-loader msm-firmware-loader-wcnss"
 	mkdir "$subpkgdir"
 }
 

@@ -94,14 +94,25 @@ package already carries.
 
 `linux-postmarketos-qcom-msm8916` with the four patches wired into `source=`
 and the new Kconfig symbols merged in `prepare()`, plus `device-samsung-on7`
-with the display modules added to `modules-initfs`, and `firmware-samsung-on7`.
+with the display modules added to `modules-initfs`.
 
-**Upstream pmaports has archived both `device-samsung-on7` and
-`firmware-samsung-on7` as unmaintained**, which is why `pmbootstrap init` does
-not offer the device at all. `scripts/apply-to-pmaports.sh` restores them from
-`device/archived/` into `device/testing/` before patching. The kernel package
-also moved from `device/community/` to `device/testing/`; the script accepts
-either.
+**Upstream pmaports has archived `device-samsung-on7` as unmaintained**, which
+is why `pmbootstrap init` does not offer the device at all.
+`scripts/apply-to-pmaports.sh` moves it from `device/archived/` into
+`device/testing/` before patching. The kernel package also moved from
+`device/community/` to `device/testing/`; the script accepts either.
+
+Two packaging details that are easy to get wrong and fail confusingly:
+
+- The kernel `pkgrel` is bumped. Without that, pmbootstrap treats the mirror's
+  unpatched binary kernel as current and never rebuilds, so the device tree and
+  panel drivers silently never reach the phone.
+- `device-samsung-on7-nonfree-firmware` no longer depends on
+  `firmware-samsung-on7`, whose WiFi calibration blob came from a pastebin URL.
+  A failed fetch there leaves `firmware-samsung-on7-wcnss-nv` unbuilt and the
+  whole install dies at `apk ... unable to select packages`. It now uses
+  `msm-firmware-loader-wcnss`, which reads that data off the phone's own stock
+  firmware partition.
 
 Note that pmbootstrap clones pmaports from `gitlab.postmarketos.org`, not the
 older `gitlab.com` mirror.

@@ -13,8 +13,8 @@
 # Run on its own it downloads the patches and packages it needs. With no
 # pmaports argument the path comes from `pmbootstrap config aports`.
 #
-# Upstream pmaports has archived device-samsung-on7 and firmware-samsung-on7
-# as unmaintained, so this restores them into device/testing/ before patching.
+# Upstream pmaports has archived device-samsung-on7 as unmaintained, so this
+# restores it into device/testing/ before patching.
 set -eu
 
 REPO_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/.." 2>/dev/null && pwd || echo "")
@@ -30,8 +30,7 @@ pmaports/linux-postmarketos-qcom-msm8916/on7-display.config
 pmaports/device-samsung-on7/APKBUILD
 pmaports/device-samsung-on7/deviceinfo
 pmaports/device-samsung-on7/modules-initfs
-pmaports/device-samsung-on7/kernel-cmdline.conf
-pmaports/firmware-samsung-on7/APKBUILD"
+pmaports/device-samsung-on7/kernel-cmdline.conf"
 
 # Piped straight from curl there is no repo next to the script, so fetch the
 # files instead. SRC is what everything below copies from.
@@ -110,9 +109,8 @@ if [ -z "$KDIR" ]; then
 fi
 echo ">> kernel package: $KDIR"
 
-# device-samsung-on7 and firmware-samsung-on7 are archived upstream as
-# unmaintained, so pmbootstrap will not offer the device until they are back
-# in device/testing.
+# device-samsung-on7 is archived upstream as unmaintained, so pmbootstrap will
+# not offer the device until it is back in device/testing.
 # It has to be a move, not a copy: pmbootstrap scans every device/ subfolder
 # and refuses to build a package that appears in more than one of them
 # ("found in multiple aports subfolders").
@@ -137,9 +135,17 @@ restore_from_archive() {
 }
 
 restore_from_archive device-samsung-on7
-restore_from_archive firmware-samsung-on7
 DDIR=$APORTS/device/testing/device-samsung-on7
-FDIR=$APORTS/device/testing/firmware-samsung-on7
+
+# An earlier version of this script also un-archived firmware-samsung-on7.
+# Nothing needs it any more (its WiFi calibration blob came from a pastebin
+# URL that is not a dependable build input), so put it back where it was.
+if [ -d "$APORTS/device/testing/firmware-samsung-on7" ] &&
+   [ ! -d "$APORTS/device/archived/firmware-samsung-on7" ]; then
+	echo ">> returning firmware-samsung-on7 to device/archived"
+	mv "$APORTS/device/testing/firmware-samsung-on7" \
+	   "$APORTS/device/archived/firmware-samsung-on7"
+fi
 
 # Keep a copy of anything being overwritten, so this is undoable.
 BACKUP=$APORTS/.on7-display-backup
@@ -156,20 +162,24 @@ cp "$SRC"/kernel/patches/*.patch "$KDIR"/
 cp "$SRC"/pmaports/linux-postmarketos-qcom-msm8916/APKBUILD "$KDIR"/
 cp "$SRC"/pmaports/linux-postmarketos-qcom-msm8916/on7-display.config "$KDIR"/
 
-echo ">> installing device and firmware packages"
+echo ">> installing device package"
 cp "$SRC"/pmaports/device-samsung-on7/APKBUILD "$DDIR"/
 cp "$SRC"/pmaports/device-samsung-on7/deviceinfo "$DDIR"/
 cp "$SRC"/pmaports/device-samsung-on7/modules-initfs "$DDIR"/
 cp "$SRC"/pmaports/device-samsung-on7/kernel-cmdline.conf "$DDIR"/
-cp "$SRC"/pmaports/firmware-samsung-on7/APKBUILD "$FDIR"/
 
 if command -v pmbootstrap >/dev/null 2>&1; then
 	echo ">> regenerating checksums"
-	pmbootstrap checksum linux-postmarketos-qcom-msm8916 \
-		device-samsung-on7 firmware-samsung-on7
+	if ! pmbootstrap checksum linux-postmarketos-qcom-msm8916 device-samsung-on7; then
+		echo >&2
+		echo "error: 'pmbootstrap checksum' failed." >&2
+		echo "Without it the build fails later with a confusing" >&2
+		echo "\"Use 'abuild checksum'\" error, so fix this first." >&2
+		exit 1
+	fi
 else
 	echo ">> pmbootstrap not in PATH; run this yourself:"
-	echo "   pmbootstrap checksum linux-postmarketos-qcom-msm8916 device-samsung-on7 firmware-samsung-on7"
+	echo "   pmbootstrap checksum linux-postmarketos-qcom-msm8916 device-samsung-on7"
 fi
 
 cat <<MSG

@@ -98,9 +98,9 @@ curl -fsSL https://raw.githubusercontent.com/alphx61-claude/Samsung_on7_port/HEA
 
 > **Why the On7 is missing from `pmbootstrap init`**
 >
-> Upstream pmaports archived `device-samsung-on7` and `firmware-samsung-on7` as
-> unmaintained, so they live in `device/archived/` where pmbootstrap ignores
-> them. The helper moves both back into `device/testing/`. It has to be a move:
+> Upstream pmaports archived `device-samsung-on7` as unmaintained, so it lives
+> in `device/archived/` where pmbootstrap ignores it. The helper moves it back
+> into `device/testing/`. It has to be a move:
 > pmbootstrap scans every `device/` subfolder and refuses to build a package
 > that appears in two of them. It also handles the kernel package having moved
 > from `device/community/` to `device/testing/`.

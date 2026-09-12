@@ -61,10 +61,13 @@ $ pmbootstrap flasher flash_kernel
 $ pmbootstrap flasher flash_rootfs
 ```
 
-## 3. Update lk2nd (recommended)
+## 3. Update lk2nd
 
-Without this step the kernel always assumes the Samsung S6D7AA0X62. That is
-correct for most units but wrong if step 1 reported the ILI9881C.
+**Skip this if step 1 reported the Samsung S6D7AA0X62** — that is already the
+default, and lk2nd would only confirm it.
+
+Do it if step 1 reported the ILI9881C, or if you want the boot to pick the panel
+up automatically rather than relying on the default.
 
 ```console
 $ git clone https://github.com/msm8916-mainline/lk2nd.git

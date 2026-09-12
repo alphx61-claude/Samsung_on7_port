@@ -44,6 +44,10 @@ it at all.
    | `ss_dsi_panel_S6D7AA0X62_BV050HDM_HD` | Samsung S6D7AA0X62 | `samsung,s6d7aa0x62-bv050hdm` |
    | `ss_dsi_panel_ILI9881C_SKI550002_HD` | Ilitek ILI9881C | `samsung,ili9881c-ski550002` |
 
+   Board revision does not affect this. All three SWA revisions (r01/r02/r03)
+   use the same reset/enable GPIOs, the same supplies and the same LM3632
+   wiring, so only the panel itself varies.
+
 ## What is in here
 
 Patches, not a fork. Five commits total.
@@ -104,8 +108,13 @@ ti-lmu-backlight.ko                    of:N*T*Cti,lm3632-backlight
 
 The patched lk2nd device tree compiles too.
 
-**None of this has been tested on real hardware** — there is no On7 attached to
-the machine this was built on. The register sequences, GPIOs, supplies and
+One data point from real hardware: on an SM-G600FY running LineageOS 16.0
+(bootloader `G600FYXXU1BRD2`), the downstream kernel reports
+`panel_name=ss_dsi_panel_S6D7AA0X62_BV050HDM_HD` — the Samsung panel, which is
+what the device tree here defaults to.
+
+**The display itself has not been tested on real hardware** — there is no On7
+attached to the machine this was built on. The register sequences, GPIOs, supplies and
 timings are transcribed from the vendor kernel, but the LM3632 configuration in
 particular involved one deliberate deviation, documented in
 [`docs/INSTALL.md`](docs/INSTALL.md#if-the-panel-stays-dark), along with what to

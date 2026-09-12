@@ -1,14 +1,59 @@
 # Installing
 
-## Before you start
+## What this actually replaces
 
-You need **lk2nd** already flashed and working. If `fastboot devices` finds the
-phone after holding Volume Down + Home + Power, you have it. If you got SSH on
-the existing `samsung-on7` port, you have it.
+postmarketOS is **not a kernel you drop onto LineageOS**. The two cannot share a
+device:
 
-Back up your device first. `pmbootstrap install` erases userdata.
+- LineageOS runs Samsung's downstream 3.10 kernel and needs Android HALs for
+  graphics, audio and modem.
+- postmarketOS runs a mainline 6.6 kernel with none of those. It is a different
+  operating system, with a different init, userspace and driver model.
+
+So installing it takes the **boot partition** (lk2nd plus the pmOS boot image)
+and the **userdata partition** (the pmOS root filesystem). Your LineageOS
+install goes with it.
+
+This is reversible — reflash LineageOS, or stock firmware via Odin/Heimdall,
+whenever you want the phone back. But back up anything on it first, because
+`pmbootstrap install` erases userdata.
+
+## What you need
+
+- **A computer running Linux.** pmbootstrap does not run on the phone, and it
+  needs Linux (WSL2 works; macOS is rough). This is the one hard prerequisite.
+- `heimdall` (or Odin on Windows) to get lk2nd on, and `fastboot` after that.
+- A USB cable that does data, not just charging.
+
+## Before you start: get lk2nd back
+
+If you are booting LineageOS right now, **lk2nd is not installed** — LineageOS
+wrote its own boot image over it. You need to put it back before anything else
+here works.
+
+Check: hold Volume Down while powering on. If `fastboot devices` lists the
+phone, lk2nd is there. If the phone just boots LineageOS, it is not.
+
+To install it, use Samsung Download mode (Volume Down + Home + Power, then
+Volume Up to confirm) — the stock Samsung bootloader has no fastboot, so this
+first step goes through Heimdall:
+
+```console
+$ wget https://github.com/msm8916-mainline/lk2nd/releases/latest/download/lk2nd.img
+$ heimdall flash --BOOT lk2nd.img
+```
+
+From then on lk2nd provides fastboot itself, entered by holding Volume Down
+while booting.
+
+One detail worth knowing: lk2nd lives at the *start* of the boot partition and
+stores the OS boot image 512 KiB into it, so `fastboot flash boot boot.img`
+later does not overwrite lk2nd. That is why installing LineageOS — which writes
+at offset 0 — removes it.
 
 ## 1. Find out which panel you have
+
+Do this *before* wiping, while Android is still installed.
 
 If you are still on Android/LineageOS, the easiest check is one Termux command
 — see [`DIAGNOSTICS.md`](DIAGNOSTICS.md). Otherwise, lk2nd reports the panel the

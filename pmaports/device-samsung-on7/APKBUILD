@@ -2,7 +2,9 @@
 pkgname=device-samsung-on7
 pkgdesc="Samsung Galaxy On7 (2015)"
 pkgver=6
-pkgrel=1
+# pkgrel must be bumped on every change here, or pmbootstrap reuses the
+# previously built binary and the change silently does not take effect.
+pkgrel=2
 url="https://postmarketos.org"
 license="MIT"
 arch="aarch64"

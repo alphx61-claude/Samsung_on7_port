@@ -75,36 +75,88 @@ the exact string — this port only knows about those two.
 
 ## 2. Build postmarketOS with the patches
 
+Install pmbootstrap if you have not already — your distro may package it,
+otherwise:
+
 ```console
-$ git clone https://gitlab.com/postmarketOS/pmaports.git
-$ cd pmaports
+$ pipx install pmbootstrap      # or: pip install --user pmbootstrap
 ```
 
-Copy the patched packages in:
+Run `init` **first**. This is what clones pmaports, so there is nothing to
+patch until it has run:
 
 ```console
+$ pmbootstrap init
+```
+
+Answer it roughly like this:
+
+| Prompt | Answer |
+|---|---|
+| Channel | `edge` |
+| Vendor | `samsung` |
+| Device | `on7` |
+| Device is in `testing` | confirm |
+| `soc-qcom-msm8916-rproc` provider | `rproc-all` for WiFi/BT/modem |
+| User interface | `console` first — see below |
+| Username, passwords | whatever you like |
+
+Pick **`console`** for the first install. If the display works you will see a
+login prompt, which is an unambiguous answer. A full desktop adds a second thing
+that can fail and muddies the diagnosis; you can switch later with
+`pmbootstrap init` and reinstall.
+
+Now apply the patches. The helper resolves the pmaports path itself, backs up
+the files it replaces, and regenerates the checksums:
+
+```console
+$ cd /path/to/this/repo
+$ ./scripts/apply-to-pmaports.sh
+```
+
+<details>
+<summary>Or do it by hand</summary>
+
+```console
+$ APORTS=$(pmbootstrap config aports)
 $ REPO=/path/to/this/repo
 $ cp "$REPO"/kernel/patches/*.patch \
-     "$REPO"/pmaports/linux-postmarketos-qcom-msm8916/* \
-     device/community/linux-postmarketos-qcom-msm8916/
-$ cp "$REPO"/pmaports/device-samsung-on7/* device/testing/device-samsung-on7/
-```
-
-Regenerate the checksums (the APKBUILDs ship without them on purpose, so you
-cannot accidentally build stale sources):
-
-```console
+     "$REPO"/pmaports/linux-postmarketos-qcom-msm8916/APKBUILD \
+     "$REPO"/pmaports/linux-postmarketos-qcom-msm8916/on7-display.config \
+     "$APORTS"/device/community/linux-postmarketos-qcom-msm8916/
+$ cp "$REPO"/pmaports/device-samsung-on7/* \
+     "$APORTS"/device/testing/device-samsung-on7/
 $ pmbootstrap checksum linux-postmarketos-qcom-msm8916 device-samsung-on7
 ```
 
-Then build and install as usual:
+</details>
+
+Then build. The kernel compiles under emulation, so expect 20-60 minutes on the
+first run; later builds are cached:
 
 ```console
-$ pmbootstrap init          # pick samsung / on7
 $ pmbootstrap install
+```
+
+## 2b. Flash
+
+Boot the phone into lk2nd's fastboot — hold **Volume Down** while powering on —
+and check the computer sees it:
+
+```console
+$ fastboot devices
+```
+
+Then:
+
+```console
 $ pmbootstrap flasher flash_kernel
 $ pmbootstrap flasher flash_rootfs
 ```
+
+Reboot. With `console` selected you should get a login prompt on the screen. If
+the screen stays black, SSH in over USB (`ssh user@172.16.42.1`) and jump to
+[If the panel stays dark](#if-the-panel-stays-dark).
 
 ## 3. Update lk2nd
 

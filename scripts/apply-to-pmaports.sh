@@ -113,16 +113,23 @@ echo ">> kernel package: $KDIR"
 # device-samsung-on7 and firmware-samsung-on7 are archived upstream as
 # unmaintained, so pmbootstrap will not offer the device until they are back
 # in device/testing.
+# It has to be a move, not a copy: pmbootstrap scans every device/ subfolder
+# and refuses to build a package that appears in more than one of them
+# ("found in multiple aports subfolders").
 restore_from_archive() {
 	_pkg=$1
 	_dst=$APORTS/device/testing/$_pkg
 	_src=$APORTS/device/archived/$_pkg
-	if [ -d "$_dst" ]; then
+
+	if [ -d "$_dst" ] && [ -d "$_src" ]; then
+		# An earlier version of this script copied instead of moving.
+		echo ">> removing the duplicate archived copy of $_pkg"
+		rm -rf "$_src"
+	elif [ -d "$_dst" ]; then
 		echo ">> $_pkg already in device/testing"
 	elif [ -d "$_src" ]; then
-		echo ">> restoring $_pkg from device/archived"
-		mkdir -p "$_dst"
-		cp "$_src"/* "$_dst"/
+		echo ">> moving $_pkg out of device/archived"
+		mv "$_src" "$_dst"
 	else
 		echo "error: $_pkg is in neither device/testing nor device/archived" >&2
 		exit 1
@@ -176,4 +183,7 @@ Done. Next:
 
 The original kernel APKBUILD is backed up at:
   $BACKUP
+
+To undo everything, in the pmaports checkout:
+  git checkout . && git clean -fd
 MSG

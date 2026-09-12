@@ -100,8 +100,13 @@ curl -fsSL https://raw.githubusercontent.com/alphx61-claude/Samsung_on7_port/HEA
 >
 > Upstream pmaports archived `device-samsung-on7` and `firmware-samsung-on7` as
 > unmaintained, so they live in `device/archived/` where pmbootstrap ignores
-> them. The helper copies both back into `device/testing/`. It also handles the
-> kernel package having moved from `device/community/` to `device/testing/`.
+> them. The helper moves both back into `device/testing/`. It has to be a move:
+> pmbootstrap scans every `device/` subfolder and refuses to build a package
+> that appears in two of them. It also handles the kernel package having moved
+> from `device/community/` to `device/testing/`.
+>
+> To undo everything, run `git checkout . && git clean -fd` in the pmaports
+> checkout.
 
 Then run `init` **again** — `samsung` / `on7` is selectable now:
 

@@ -10,18 +10,20 @@ set -eu
 
 REPO_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 WORK_DIR=${1:-$REPO_DIR/build}
-KERNEL_TAG=v6.6-msm8916
+KERNEL_TAG=v6.12.1-msm8916
 KERNEL_URL=https://github.com/msm8916-mainline/linux.git
 SRC_DIR=$WORK_DIR/linux
 
-: "${CROSS_COMPILE:=aarch64-linux-gnu-}"
 : "${JOBS:=$(nproc)}"
-export ARCH=arm64 CROSS_COMPILE
+export ARCH=arm64
 
-for tool in git make dtc "${CROSS_COMPILE}gcc"; do
+# pmaports builds this kernel with LLVM=1, so do the same here.
+MAKE_ARGS="LLVM=1"
+
+for tool in git make dtc clang ld.lld llvm-objcopy; do
 	command -v "$tool" >/dev/null || {
 		echo "error: $tool not found in PATH" >&2
-		echo "hint: apt install git make device-tree-compiler gcc-aarch64-linux-gnu" >&2
+		echo "hint: apt install git make device-tree-compiler clang lld llvm" >&2
 		exit 1
 	}
 done
@@ -47,14 +49,14 @@ fi
 echo ">> Configuring"
 if [ ! -f "$WORK_DIR/config-postmarketos-qcom-msm8916.aarch64" ]; then
 	curl -fsSL -o "$WORK_DIR/config-postmarketos-qcom-msm8916.aarch64" \
-		"https://gitlab.com/postmarketOS/pmaports/-/raw/master/device/community/linux-postmarketos-qcom-msm8916/config-postmarketos-qcom-msm8916.aarch64"
+		"https://gitlab.postmarketos.org/postmarketOS/pmaports/-/raw/main/device/testing/linux-postmarketos-qcom-msm8916/config-postmarketos-qcom-msm8916.aarch64"
 fi
 cp "$WORK_DIR/config-postmarketos-qcom-msm8916.aarch64" .config
 cat "$REPO_DIR/pmaports/linux-postmarketos-qcom-msm8916/on7-display.config" >> .config
-make olddefconfig
+make $MAKE_ARGS olddefconfig
 
 echo ">> Building (-j$JOBS)"
-make "-j$JOBS" Image.gz modules dtbs
+make $MAKE_ARGS "-j$JOBS" Image.gz modules dtbs
 
 echo
 echo "Built:"

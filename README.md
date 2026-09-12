@@ -11,7 +11,7 @@ Also applies to SM-G600F and SM-G6000, which use the same board and panels.
 | SoC | Qualcomm MSM8916 (Snapdragon 410), 4x Cortex-A53, Adreno 306 |
 | Vendor codename | `o7lte` (`o7lte-swa` for SM-G600FY, `o7lte-chn` for SM-G6000) |
 | pmOS device package | `device-samsung-on7` |
-| Kernel | `linux-postmarketos-qcom-msm8916` — msm8916-mainline, tag `v6.6-msm8916` |
+| Kernel | `linux-postmarketos-qcom-msm8916` — msm8916-mainline, tag `v6.12.1-msm8916` |
 | Panel | 5.5" 720x1280 DSI video mode, **dual-sourced** (see below) |
 | Backlight / panel bias | TI LM3632 on a bit-banged I2C bus |
 
@@ -52,14 +52,14 @@ it at all.
 
 Patches, not a fork. Five commits total.
 
-### `kernel/patches/` — against `v6.6-msm8916`
+### `kernel/patches/` — against `v6.12.1-msm8916`
 
 | Patch | What it does |
 |---|---|
-| `0001` | New DRM panel driver for the Samsung S6D7AA0X62 BV050HDM |
-| `0002` | New DRM panel driver for the Ilitek ILI9881C SKI550002 |
-| `0003` | New `ti-lmu-backlight` driver for the LM3632 |
-| `0004` | Display, backlight and touchscreen nodes in `msm8916-samsung-on7.dts` |
+| `1001` | New DRM panel driver for the Samsung S6D7AA0X62 BV050HDM |
+| `1002` | New DRM panel driver for the Ilitek ILI9881C SKI550002 |
+| `1003` | New `ti-lmu-backlight` driver for the LM3632 |
+| `1004` | Display, backlight and touchscreen nodes in `msm8916-samsung-on7.dts` |
 
 Both panel drivers were generated with
 [linux-mdss-dsi-panel-driver-generator][lmdpdg] from the vendor device tree in
@@ -87,18 +87,34 @@ The kernel device tree defaults to the S6D7AA0X62 and carries
 on. So an up-to-date lk2nd picks the right panel automatically, and an older one
 still gets the S6D7AA0X62 default rather than nothing.
 
+Numbered from 1001 so they sort after the `0001-kbuild-*` patch the kernel
+package already carries.
+
 ### `pmaports/` — drop-in package updates
 
 `linux-postmarketos-qcom-msm8916` with the four patches wired into `source=`
 and the new Kconfig symbols merged in `prepare()`, plus `device-samsung-on7`
-with the display modules added to `modules-initfs`.
+with the display modules added to `modules-initfs`, and `firmware-samsung-on7`.
+
+**Upstream pmaports has archived both `device-samsung-on7` and
+`firmware-samsung-on7` as unmaintained**, which is why `pmbootstrap init` does
+not offer the device at all. `scripts/apply-to-pmaports.sh` restores them from
+`device/archived/` into `device/testing/` before patching. The kernel package
+also moved from `device/community/` to `device/testing/`; the script accepts
+either.
+
+Note that pmbootstrap clones pmaports from `gitlab.postmarketos.org`, not the
+older `gitlab.com` mirror.
 
 ## Build status
 
-A full arm64 `Image.gz + modules + dtbs` build of `v6.6-msm8916` with these
-patches and the stock postmarketOS msm8916 config succeeds. The three new
-drivers compile warning-free, `msm8916-samsung-on7.dtb` builds clean, and the
-module aliases match the compatibles in the device tree:
+Against `v6.12.1-msm8916` with the stock postmarketOS msm8916 config, built
+with `LLVM=1` the way the pmaports package builds it: the three new drivers
+compile warning-free, `msm8916-samsung-on7.dtb` builds clean, and all four
+patches apply to a pristine tree with `patch -p1` alongside the
+`0001-kbuild-*` patch the package already carries. The module aliases match the compatibles in the device
+tree (verified on the 6.6 build; the drivers are unchanged apart from the DSI
+API):
 
 ```
 panel-samsung-s6d7aa0x62-bv050hdm.ko   of:N*T*Csamsung,s6d7aa0x62-bv050hdm

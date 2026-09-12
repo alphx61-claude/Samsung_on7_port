@@ -1,34 +1,40 @@
-# Maintainer: Minecrell <minecrell@minecrell.net>
-# Co-Maintainer: Nikita Travkin <nikita@trvn.ru>
 # Kernel config based on: arch/arm64/configs/msm8916_defconfig
-
+maintainer="Nikita Travkin <nikita@trvn.ru>"
 _flavor="postmarketos-qcom-msm8916"
 pkgname=linux-$_flavor
-pkgver=6.6
+pkgver=6.12.1
 # When making kernel config changes please also submit a PR to
 # https://github.com/msm8916-mainline/linux/blob/master/kernel/configs/pmos.config
 # since the kernel config is regenerated on upgrades and all changes will be lost!
-pkgrel=9
+pkgrel=6
 # NOTE: patched for Samsung Galaxy On7 (2015) display support
 pkgdesc="Mainline kernel fork for Qualcomm MSM8909/MSM8916/MSM8939 devices"
 arch="aarch64 armv7"
 url="https://github.com/msm8916-mainline/linux"
 license="GPL-2.0-only"
-options="!strip !check !tracedeps
+options="
+	!check
+	!strip
+	!tracedeps
 	pmb:cross-native
 	pmb:kconfigcheck-community
 	pmb:kconfigcheck-uefi
 "
 makedepends="
 	bison
+	clang
+	elfutils-dev
 	findutils
 	flex
-	gmp-dev
-	mpc1-dev
-	mpfr-dev
+	linux-headers
+	lld
+	llvm
 	openssl-dev
+	pahole
 	perl
 	postmarketos-installkernel
+	python3
+	zstd
 "
 replaces="linux-postmarketos-qcom-msm8909 linux-postmarketos-qcom-msm8939"
 
@@ -44,11 +50,12 @@ source="
 	$pkgname-$_tag.tar.gz::$url/archive/$_tag.tar.gz
 	config-$_flavor.aarch64
 	config-$_flavor.armv7
+	0001-kbuild-Add-fno-builtin-wcslen.patch
 	on7-display.config
-	0001-drm-panel-Add-Samsung-S6D7AA0X62-BV050HDM-panel-driv.patch
-	0002-drm-panel-Add-Ilitek-ILI9881C-SKI550002-panel-driver.patch
-	0003-backlight-Add-TI-LMU-LM3632-backlight-driver.patch
-	0004-arm64-dts-qcom-msm8916-samsung-on7-Add-display-and-t.patch
+	1001-drm-panel-Add-Samsung-S6D7AA0X62-BV050HDM-panel-driv.patch
+	1002-drm-panel-Add-Ilitek-ILI9881C-SKI550002-panel-driver.patch
+	1003-backlight-Add-TI-LMU-LM3632-backlight-driver.patch
+	1004-arm64-dts-qcom-msm8916-samsung-on7-Add-display-and-t.patch
 "
 builddir="$srcdir/linux-${_tag#v}"
 
@@ -59,12 +66,12 @@ prepare() {
 	# Samsung Galaxy On7 (2015): panel drivers, LM3632 backlight/bias
 	# and the touchscreen are not enabled in the stock config.
 	cat "$srcdir/on7-display.config" >> .config
-	make ARCH="$_carch" olddefconfig
+	make ARCH="$_carch" LLVM=1 olddefconfig
 }
 
 build() {
 	unset LDFLAGS
-	make ARCH="$_carch" CC="${CC:-gcc}" \
+	make ARCH="$_carch" LLVM=1 HOSTLDFLAGS="-fuse-ld=lld" \
 		KBUILD_BUILD_VERSION=$((pkgrel + 1 ))
 }
 
@@ -91,19 +98,21 @@ package() {
 
 	make $_install_targets \
 		ARCH="$_carch" \
+		LLVM=1 \
 		INSTALL_PATH="$pkgdir"/boot \
-		INSTALL_MOD_PATH="$pkgdir" \
+		INSTALL_MOD_PATH="$pkgdir"/usr \
 		INSTALL_MOD_STRIP=1 \
 		INSTALL_DTBS_PATH="$pkgdir"/boot/dtbs
-	rm -f "$pkgdir"/lib/modules/*/build "$pkgdir"/lib/modules/*/source
+	rm -f "$pkgdir"/usr/lib/modules/*/build "$pkgdir"/usr/lib/modules/*/source
 
 	install -D "$builddir"/include/config/kernel.release \
-		"$pkgdir"/usr/share/kernel/$_flavor/kernel.release
+		"$pkgdir"/usr/share/kernel/"$_flavor"/kernel.release
 }
 
 # Run "pmbootstrap checksum linux-postmarketos-qcom-msm8916" to regenerate.
 sha512sums="
-5fbbdf333412667e0a0e38dcc7e83f640bd5a1e0b07e1c7786ff3e18f17b9cdec088936263d68986b3869ee305cfcecdf22970134ca8fb8d2a2769874a5a4676  linux-postmarketos-qcom-msm8916-v6.6-msm8916.tar.gz
-677eb54cf58ef9b0992a8ed6c52188230b7e3ceb0dac4850b040458468637867f7b92dcce4895caae1053a425de64bfdf2ebc266a5dcf30b2626827fccb23419  config-postmarketos-qcom-msm8916.aarch64
-5a5d45f5a3dbefe8eaf5c796c5362a2c0b6e94b2b27cb5a139315c7894d74a37619800c549bf1d0eec6ca2d9d69b36d3957cc5ac6853e8fa43b4de022be246b0  config-postmarketos-qcom-msm8916.armv7
+e46fecfdab77f26c5127ddfd057d31bdf441da7fbf233cd574b396e762ea8992af65f577c595bab6761d1d339016733eb3ab652bf3a221e8b1f6bad4aa6adef5  linux-postmarketos-qcom-msm8916-v6.12.1-msm8916.tar.gz
+bf1329ca9d19f1c318894c9507d023a531a0d4dc3c7510bfcc599e6219235b41284d0f690292c037eb39a8bc4f25283339cc17bdc50e317e31bc8e52ea74e0c1  config-postmarketos-qcom-msm8916.aarch64
+4af33dffa3e8eaadbde4d4a1350c36003e39bf35b632fa509d53a3fa17b2d5c5a51d24ce5e315e3485dbc71dc34162ed11c8caa309e9cbdf9af7e038c1a708c1  config-postmarketos-qcom-msm8916.armv7
+2a5c20bd9da57e42767fa70eb1aa27623e4013b5dadc3f35508e1497fb4bfd53d8775c372eea8c4d95bd12eff43f23c7a4acfb219313dcb7915643804fc73cb2  0001-kbuild-Add-fno-builtin-wcslen.patch
 "

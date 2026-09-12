@@ -1,8 +1,8 @@
-From 466994d27abea3d2cdee2d6bd32dc31dc141022f Mon Sep 17 00:00:00 2001
+From 62a2df0cd7b80fa7282fb3ccf7c6a95e1aa274d3 Mon Sep 17 00:00:00 2001
 From: alphx61-claude <taranrajput11@gmail.com>
-Date: Fri, 11 Sep 2026 22:19:35 +0000
-Subject: [PATCH 4/4] arm64: dts: qcom: msm8916-samsung-on7: Add display and
- touchscreen
+Date: Sat, 12 Sep 2026 08:58:02 +0000
+Subject: [PATCH 1004/1004] arm64: dts: qcom: msm8916-samsung-on7: Add display
+ and touchscreen
 
 The On7 device tree had no display nodes at all, so the device booted
 headless: everything else came up, but the panel was never driven.

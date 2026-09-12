@@ -75,21 +75,39 @@ the exact string — this port only knows about those two.
 
 ## 2. Build postmarketOS with the patches
 
-Install pmbootstrap if you have not already — your distro may package it,
-otherwise:
+Install pmbootstrap if you have not already:
 
-```console
-$ pipx install pmbootstrap      # or: pip install --user pmbootstrap
+```
+pipx install pmbootstrap      # or: pip install --user pmbootstrap
 ```
 
-Run `init` **first**. This is what clones pmaports, so there is nothing to
-patch until it has run:
+Run `init` **first** — it is what clones pmaports, so there is nothing to patch
+until it has run. It will not offer the On7 yet; that is expected and the next
+step fixes it:
 
-```console
-$ pmbootstrap init
+```
+pmbootstrap init
 ```
 
-Answer it roughly like this:
+Now apply everything. The helper resolves the pmaports path itself, restores
+the two archived packages, installs the patches and regenerates the checksums:
+
+```
+curl -fsSL https://raw.githubusercontent.com/alphx61-claude/Samsung_on7_port/HEAD/scripts/apply-to-pmaports.sh | sh
+```
+
+> **Why the On7 is missing from `pmbootstrap init`**
+>
+> Upstream pmaports archived `device-samsung-on7` and `firmware-samsung-on7` as
+> unmaintained, so they live in `device/archived/` where pmbootstrap ignores
+> them. The helper copies both back into `device/testing/`. It also handles the
+> kernel package having moved from `device/community/` to `device/testing/`.
+
+Then run `init` **again** — `samsung` / `on7` is selectable now:
+
+```
+pmbootstrap init
+```
 
 | Prompt | Answer |
 |---|---|
@@ -106,36 +124,11 @@ login prompt, which is an unambiguous answer. A full desktop adds a second thing
 that can fail and muddies the diagnosis; you can switch later with
 `pmbootstrap init` and reinstall.
 
-Now apply the patches. The helper resolves the pmaports path itself, backs up
-the files it replaces, and regenerates the checksums:
+Then build. The kernel cross-compiles under emulation, so expect 20-60 minutes
+on the first run; later builds are cached:
 
-```console
-$ cd /path/to/this/repo
-$ ./scripts/apply-to-pmaports.sh
 ```
-
-<details>
-<summary>Or do it by hand</summary>
-
-```console
-$ APORTS=$(pmbootstrap config aports)
-$ REPO=/path/to/this/repo
-$ cp "$REPO"/kernel/patches/*.patch \
-     "$REPO"/pmaports/linux-postmarketos-qcom-msm8916/APKBUILD \
-     "$REPO"/pmaports/linux-postmarketos-qcom-msm8916/on7-display.config \
-     "$APORTS"/device/community/linux-postmarketos-qcom-msm8916/
-$ cp "$REPO"/pmaports/device-samsung-on7/* \
-     "$APORTS"/device/testing/device-samsung-on7/
-$ pmbootstrap checksum linux-postmarketos-qcom-msm8916 device-samsung-on7
-```
-
-</details>
-
-Then build. The kernel compiles under emulation, so expect 20-60 minutes on the
-first run; later builds are cached:
-
-```console
-$ pmbootstrap install
+pmbootstrap install
 ```
 
 ## 2b. Flash
@@ -176,7 +169,7 @@ $ fastboot flash boot build-lk2nd-msm8916/lk2nd.img
 
 If you would rather not rebuild lk2nd and step 1 reported the **ILI9881C**, edit
 the panel compatible in
-`kernel/patches/0004-arm64-dts-qcom-msm8916-samsung-on7-Add-display-and-t.patch`
+`kernel/patches/1004-arm64-dts-qcom-msm8916-samsung-on7-Add-display-and-t.patch`
 instead, changing:
 
 ```dts

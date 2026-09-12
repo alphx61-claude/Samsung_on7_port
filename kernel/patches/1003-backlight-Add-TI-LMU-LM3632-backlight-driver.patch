@@ -1,7 +1,7 @@
-From 2cc7187987d2ad49e74cb0870278bbe0dd6e97cc Mon Sep 17 00:00:00 2001
+From 7faaa9b34b2b506d5b6cc90302f936f289d9818a Mon Sep 17 00:00:00 2001
 From: alphx61-claude <taranrajput11@gmail.com>
-Date: Fri, 11 Sep 2026 22:19:35 +0000
-Subject: [PATCH 3/4] backlight: Add TI LMU (LM3632) backlight driver
+Date: Sat, 12 Sep 2026 08:58:02 +0000
+Subject: [PATCH 1003/1004] backlight: Add TI LMU (LM3632) backlight driver
 
 drivers/mfd/ti-lmu.c registers a "ti-lmu-backlight" cell for the
 LM3632, but no driver for that cell was ever merged, so on boards using
@@ -25,10 +25,10 @@ Claude-Session: https://claude.ai/code/session_01WBT8fxGbtA4EKiL94VBvk2
  create mode 100644 drivers/video/backlight/ti-lmu-backlight.c
 
 diff --git a/drivers/video/backlight/Kconfig b/drivers/video/backlight/Kconfig
-index 51387b1ef..1166f1aa5 100644
+index 3614a5d29..b5371f216 100644
 --- a/drivers/video/backlight/Kconfig
 +++ b/drivers/video/backlight/Kconfig
-@@ -389,6 +389,14 @@ config BACKLIGHT_LM3639
+@@ -396,6 +396,14 @@ config BACKLIGHT_LM3639
  	help
  	  This supports TI LM3639 Backlight + 1.5A Flash LED Driver
  
@@ -44,10 +44,10 @@ index 51387b1ef..1166f1aa5 100644
  	tristate "Backlight driver for TI LP855X"
  	depends on I2C && PWM
 diff --git a/drivers/video/backlight/Makefile b/drivers/video/backlight/Makefile
-index f72e1c3c5..c847413df 100644
+index 8fc98f760..559164ff6 100644
 --- a/drivers/video/backlight/Makefile
 +++ b/drivers/video/backlight/Makefile
-@@ -41,6 +41,7 @@ obj-$(CONFIG_BACKLIGHT_LM3630A)		+= lm3630a_bl.o
+@@ -42,6 +42,7 @@ obj-$(CONFIG_BACKLIGHT_LM3630A)		+= lm3630a_bl.o
  obj-$(CONFIG_BACKLIGHT_LM3639)		+= lm3639_bl.o
  obj-$(CONFIG_BACKLIGHT_LOCOMO)		+= locomolcd.o
  obj-$(CONFIG_BACKLIGHT_LP855X)		+= lp855x_bl.o

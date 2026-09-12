@@ -73,8 +73,31 @@ DDIR=$APORTS/device/testing/device-samsung-on7
 
 for d in "$KDIR" "$DDIR"; do
 	[ -d "$d" ] || {
-		echo "error: expected package directory missing: $d" >&2
-		echo "hint: is $APORTS really a pmaports checkout?" >&2
+		echo "error: expected package directory missing:" >&2
+		echo "         $d" >&2
+		echo >&2
+		echo "What is actually at $APORTS:" >&2
+		if [ -z "$(ls -A "$APORTS" 2>/dev/null)" ]; then
+			echo "  (empty)" >&2
+			echo >&2
+			echo "The directory exists but nothing has been cloned into it." >&2
+			echo "Run 'pmbootstrap init' and let it finish, then try again." >&2
+		else
+			ls -A "$APORTS" 2>/dev/null | head -15 | sed 's/^/  /' >&2
+			if [ -e "$APORTS/.git" ]; then
+				echo >&2
+				echo "git branch: $(git -C "$APORTS" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')" >&2
+				echo "git status: $(git -C "$APORTS" status --porcelain 2>&1 | head -1)" >&2
+				echo >&2
+				echo "If the checkout looks incomplete, refresh it with:" >&2
+				echo "  pmbootstrap pull" >&2
+			else
+				echo >&2
+				echo "This is not a git checkout, so it is probably not pmaports." >&2
+				echo "Check 'pmbootstrap config aports', or pass the right path:" >&2
+				echo "  $0 /path/to/pmaports" >&2
+			fi
+		fi
 		exit 1
 	}
 done

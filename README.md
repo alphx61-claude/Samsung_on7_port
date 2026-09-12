@@ -108,13 +108,12 @@ older `gitlab.com` mirror.
 
 ## Build status
 
-Against `v6.12.1-msm8916` with the stock postmarketOS msm8916 config, built
-with `LLVM=1` the way the pmaports package builds it: the three new drivers
-compile warning-free, `msm8916-samsung-on7.dtb` builds clean, and all four
-patches apply to a pristine tree with `patch -p1` alongside the
-`0001-kbuild-*` patch the package already carries. The module aliases match the compatibles in the device
-tree (verified on the 6.6 build; the drivers are unchanged apart from the DSI
-API):
+A full arm64 `Image.gz + modules + dtbs` build of `v6.12.1-msm8916` with these
+patches and the stock postmarketOS msm8916 config succeeds, built with `LLVM=1`
+the way the pmaports package builds it. The three new drivers compile
+warning-free, `msm8916-samsung-on7.dtb` builds clean, and all four patches
+apply to a pristine tree with `patch -p1` alongside the `0001-kbuild-*` patch
+the package already carries. The module aliases match the compatibles in the device tree:
 
 ```
 panel-samsung-s6d7aa0x62-bv050hdm.ko   of:N*T*Csamsung,s6d7aa0x62-bv050hdm

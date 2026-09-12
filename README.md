@@ -119,32 +119,37 @@ older `gitlab.com` mirror.
 
 ## Build status
 
-A full arm64 `Image.gz + modules + dtbs` build of `v6.12.1-msm8916` with these
-patches and the stock postmarketOS msm8916 config succeeds, built with `LLVM=1`
-the way the pmaports package builds it. The three new drivers compile
-warning-free, `msm8916-samsung-on7.dtb` builds clean, and all four patches
-apply to a pristine tree with `patch -p1` alongside the `0001-kbuild-*` patch
-the package already carries. The module aliases match the compatibles in the device tree:
+`pmbootstrap install` runs to completion (pmbootstrap 3.11.1, channel
+systemd-edge, UI xfce4) and the resulting packages contain the display work:
 
-```
-panel-samsung-s6d7aa0x62-bv050hdm.ko   of:N*T*Csamsung,s6d7aa0x62-bv050hdm
-panel-samsung-ili9881c-ski550002.ko    of:N*T*Csamsung,ili9881c-ski550002
-ti-lmu-backlight.ko                    of:N*T*Cti,lm3632-backlight
-```
+- The kernel is **rebuilt locally** as `6.12.1-r7` with the four patches, rather
+  than pulled from the mirror.
+- The built kernel package ships all six modules:
+  `panel-samsung-s6d7aa0x62-bv050hdm`, `panel-samsung-ili9881c-ski550002`,
+  `ti-lmu-backlight`, `ti-lmu`, `lm363x-regulator`, `zinitix`.
+- The `msm8916-samsung-on7.dtb` it installs contains `panel@0` with both the
+  `samsung,s6d7aa0x62-bv050hdm` and `samsung,on7-panel` compatibles, the
+  `ti,lm3632` MFD and its backlight child, and the `zinitix,bt548` touchscreen.
+- All six modules are present in the generated initramfs.
 
-The patched lk2nd device tree compiles too.
+Separately, a direct `make LLVM=1 Image.gz modules dtbs` of `v6.12.1-msm8916`
+with these patches builds warning-free, and all four apply to a pristine tree
+with `patch -p1` alongside the `0001-kbuild-*` patch the package already
+carries.
 
-One data point from real hardware: on an SM-G600FY running LineageOS 16.0
+**The display itself has still not been tested on real hardware** — there is no
+On7 attached to the machine this was built on. What is verified is that the
+build produces a kernel and device tree containing the intended display support;
+whether that support actually lights the panel is unproven. The register
+sequences, GPIOs, supplies and timings are transcribed from the vendor kernel,
+but the LM3632 configuration involved one deliberate deviation, documented in
+[`docs/INSTALL.md`](docs/INSTALL.md#if-the-panel-stays-dark) along with what to
+check first if the screen stays dark.
+
+One data point from real hardware: on an SM-G600FY running LineageOS
 (bootloader `G600FYXXU1BRD2`), the downstream kernel reports
 `panel_name=ss_dsi_panel_S6D7AA0X62_BV050HDM_HD` — the Samsung panel, which is
 what the device tree here defaults to.
-
-**The display itself has not been tested on real hardware** — there is no On7
-attached to the machine this was built on. The register sequences, GPIOs, supplies and
-timings are transcribed from the vendor kernel, but the LM3632 configuration in
-particular involved one deliberate deviation, documented in
-[`docs/INSTALL.md`](docs/INSTALL.md#if-the-panel-stays-dark), along with what to
-check first if the screen is still dark.
 
 ## Install
 

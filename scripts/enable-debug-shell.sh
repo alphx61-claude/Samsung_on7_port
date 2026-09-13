@@ -18,11 +18,13 @@
 #
 # With no path, it comes from `pmbootstrap config aports`.
 #
-# Then rebuild and reflash just the boot image:
+# Then rebuild and reflash:
 #   pmbootstrap install
-#   pmbootstrap flasher flash_kernel
+#   pmbootstrap flasher flash_rootfs
 #
-# The root filesystem is untouched, so there is no need to flash it again.
+# It has to be flash_rootfs, not flash_kernel: this device boots via
+# extlinux.conf inside the rootfs image, so that is where the kernel command
+# line lives. Its 12.5 MB boot partition only holds lk2nd.
 set -eu
 
 DISABLE=false
@@ -100,10 +102,10 @@ fi
 
 cat <<MSG
 
-Now rebuild and reflash only the boot image:
+Now rebuild and reflash:
 
   pmbootstrap install
-  pmbootstrap flasher flash_kernel
+  pmbootstrap flasher flash_rootfs
 
 Reboot with USB connected, give the host interface an address:
 

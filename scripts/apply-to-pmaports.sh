@@ -188,8 +188,11 @@ Done. Next:
 
   pmbootstrap init            # re-run: samsung / on7 is selectable now
   pmbootstrap install
-  pmbootstrap flasher flash_kernel
   pmbootstrap flasher flash_rootfs
+
+Do NOT run "flasher flash_kernel" on this device: its boot partition is
+12.5 MB and the boot image is ~23.6 MB. lk2nd boots the kernel from
+/extlinux/extlinux.conf inside the rootfs image instead.
 
 The original kernel APKBUILD is backed up at:
   $BACKUP

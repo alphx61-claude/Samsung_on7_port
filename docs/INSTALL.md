@@ -138,23 +138,50 @@ pmbootstrap install
 
 ## 2b. Flash
 
+> **Do not run `pmbootstrap flasher flash_kernel` on this device.** It will
+> fail, and it is not needed. See below.
+
 Boot the phone into lk2nd's fastboot — hold **Volume Down** while powering on —
 and check the computer sees it:
 
-```console
-$ fastboot devices
+```
+fastboot devices
 ```
 
-Then:
+Then flash only the root filesystem:
 
-```console
-$ pmbootstrap flasher flash_kernel
-$ pmbootstrap flasher flash_rootfs
+```
+pmbootstrap flasher flash_rootfs
 ```
 
-Reboot. With `console` selected you should get a login prompt on the screen. If
-the screen stays black, SSH in over USB (`ssh user@172.16.42.1`) and jump to
-[If the panel stays dark](#if-the-panel-stays-dark).
+That takes 10-20 minutes over USB 2.0 and looks frozen while it runs.
+
+### Why there is no flash_kernel step
+
+The On7's boot partition is far too small for a modern postmarketOS boot image:
+
+```
+fastboot getvar partition-size:boot
+partition-size:boot:     0xc80000          # 12.5 MB
+```
+
+against a `boot.img` of about 23.6 MB (9.3 MB kernel + 14.3 MB initramfs), of
+which lk2nd already occupies the first 512 KiB. It cannot fit, and trimming
+will not close a gap that size.
+
+That is exactly why `deviceinfo` sets `deviceinfo_generate_extlinux_config` and
+`deviceinfo_partition_type="msdos"`. lk2nd scans leaf partitions of at least
+16 MiB, mounts them as ext2 and boots `/extlinux/extlinux.conf` if it finds one
+(`lk2nd/boot/boot.c`). It parses the nested partition table inside the flashed
+image too (`lk2nd_wrapper_publish_subdevices()`), so the boot partition *inside*
+the rootfs image is visible to it — and that one has room to spare.
+
+So the kernel, device tree and initramfs all come from the rootfs image via
+extlinux. The 12.5 MB `boot` partition only ever holds lk2nd itself.
+
+A consequence worth remembering: **anything that changes the kernel command
+line, the kernel, or the initramfs needs `flash_rootfs`**, not `flash_kernel`,
+because `extlinux.conf` and the files it points at live in the rootfs image.
 
 ## 3. Update lk2nd
 
@@ -251,7 +278,7 @@ explicitly:
 ```
 ./scripts/enable-debug-shell.sh
 pmbootstrap install
-pmbootstrap flasher flash_kernel      # boot image only, rootfs untouched
+pmbootstrap flasher flash_rootfs      # extlinux.conf lives in the rootfs
 ```
 
 That adds `pmos.debug-shell` to the kernel command line, which stops the
